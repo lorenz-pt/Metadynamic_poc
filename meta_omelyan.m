@@ -364,3 +364,14 @@ for k = 1:cycle
 end
 
 a_rate = a_rate/cycle;
+
+filename1 =('Charge.txt');
+filename2 = ('Path.txt');
+filename3 = ('Parameters.txt');
+
+
+%Paths
+dlmwrite(filename1,Q,'-append','delimiter','\t');
+dlmwrite(filename2,y,'-append','delimiter','\t');
+dlmwrite(filename3,a_rate,'-append','delimiter','\t');
+
