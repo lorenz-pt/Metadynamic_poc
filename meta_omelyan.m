@@ -112,11 +112,12 @@ for k = 1:cycle
         Q(k) =  sum(sin(dpi*d))/dpi;  %charge for the configuration;
         index = floor((Q(k)-q(1))/dq + 1.); %position of the charge on the lattice;
         
-        if index > length(q)-1 || index <= 0
-            
-                metad = -2*kk*(abs(Q(k))+ Qtrh);
-
+        if index > length(q)-1  
+            metad = -2*kk*(Q(k)- Qtrh);
+        elseif index <= 0
+            metad = -2*kk*(-Q(k)+Qtrh);
         else
+
                 %coefficient for the derivative
                 %of the the time dependent potential;
                 metad = (v(index) - v(index+1))/dq; 
@@ -147,9 +148,10 @@ for k = 1:cycle
          Q(k) =  sum(sin(dpi*(d)))/dpi;
          index = floor((Q(k)-q(1))/dq + 1.);
          
-         if index > length(q)-1 || index <= 0
-                metad = -2*kk*(abs(Q(k))+ Qtrh);
-
+         if index > length(q)-1  
+            metad = -2*kk*(Q(k)- Qtrh);
+         elseif index <= 0
+            metad = -2*kk*(-Q(k)+Qtrh);
          else
                 metad = (v(index) - v(index+1))/dq;
 
@@ -173,9 +175,10 @@ for k = 1:cycle
          
          Q(k) =  sum(sin(dpi*d))/dpi;
          index = floor((Q(k)-q(1))/dq + 1.);
-         if index > length(q)-1 || index <= 0
-                metad = -2*kk*(abs(Q(k))+ Qtrh);
-
+         if index > length(q)-1  
+            metad = -2*kk*(Q(k)- Qtrh);
+         elseif index <= 0
+            metad = -2*kk*(-Q(k)+Qtrh);
          else
                 metad = (v(index) - v(index+1))/dq;
 
@@ -204,11 +207,12 @@ for k = 1:cycle
 
              Q(k) =  sum(sin(dpi*d))/dpi;
              index = floor((Q(k)-q(1))/dq + 1.);
-             if index > length(q)-1 || index <= 0
-                    metad = -2*kk*(abs(Q(k))+ Qtrh);
-
+             if index > length(q)-1  
+                 metad = -2*kk*(Q(k)- Qtrh);
+             elseif index <= 0
+                 metad = -2*kk*(-Q(k)+Qtrh);
              else
-                    metad = (v(index) - v(index+1))/dq;
+                 metad = (v(index) - v(index+1))/dq;
 
              end
 
@@ -232,9 +236,10 @@ for k = 1:cycle
              Q(k) =  sum(sin(dpi*d))/dpi;
              index = floor((Q(k)-q(1))/dq + 1);
              
-             if index > length(q)-1 || index <= 0
-                metad = -2*kk*(abs(Q(k))+ Qtrh);
-
+             if index > length(q)-1  
+                metad = -2*kk*(Q(k)- Qtrh);
+             elseif index <= 0
+                metad = -2*kk*(-Q(k)+Qtrh);
              else
 
                 metad = (v(index) - v(index+1))/dq;
@@ -263,9 +268,10 @@ for k = 1:cycle
          
         Q(k) =  sum(sin(dpi*d))/dpi;
         index = floor((Q(k)-q(1))/dq + 1.);
-        if index > length(q)-1 || index <= 0
-                metad = -2*kk*(abs(Q(k))+ Qtrh);
-
+        if index > length(q)-1  
+            metad = -2*kk*(Q(k)- Qtrh);
+        elseif index <= 0
+            metad = -2*kk*(-Q(k)+Qtrh);
         else
                 metad = (v(index) - v(index+1))/dq;
 
@@ -284,10 +290,10 @@ for k = 1:cycle
         
          Q(k) =  sum(sin(dpi*d))/dpi;
          index = floor((Q(k)-q(1))/dq + 1.);
-         
-         if index > length(q)-1 || index <= 0
-                metad = -2*kk*(abs(Q(k))+ Qtrh);
-
+         if index > length(q)-1  
+            metad = -2*kk*(Q(k)- Qtrh);
+         elseif index <= 0
+            metad = -2*kk*(-Q(k)+Qtrh);
          else
                 metad = (v(index) - v(index+1))/dq;
 
