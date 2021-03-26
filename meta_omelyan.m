@@ -5,19 +5,19 @@
 N = 300;
 
 %Integration time;
-T = 312;
+T = 220;
 
 %Omelyan parameter lambda;
 lam = 0.1931833275;
 
 
 %Number of measurements;
-cycle = 1e4;
+cycle = 5e4;
 
 
 % S(x(t)) parameters;
 
-e = (2*(pi^2))/N;     
+e = (1*(pi^2))/N;     
 cc = pi/(2*e);          %coefficient multiplying the force;
 den = 1/(2*e);
 
@@ -26,9 +26,9 @@ oml = 1-2*lam;
 
 %metadynamic parameters;
 
-Qtrh = 80;              %Threshold value of the charge
+Qtrh = 20;              %Threshold value of the charge
 hgt = 0.73;             %height of the time dependent potential inside Qtrh;
-dq = 0.62;              %width of the  time dependent potential inside Qtrh;
+dq = 0.82;              %width of the  time dependent potential inside Qtrh;
 kk = 2;                 %strength of the potential outside Qtrh;
 upd = 20;               % # of sweeps after which the update of the 
                         %time dependent potential is performed;
@@ -93,7 +93,7 @@ for k = 1:cycle
                                       %associated with the last path;
     
   
-    dt = (rand()-0.5)*0.005 + 0.025;    %time step of the integrator;
+    dt = (rand()-1)*0.005 + 0.025;    %time step of the integrator;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Omelyan integrator
