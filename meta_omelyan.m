@@ -12,7 +12,7 @@ lam = 0.1931833275;
 
 
 %Number of measurements;
-cycle = 5e4;
+cycle = 1e4;
 
 
 % S(x(t)) parameters;
@@ -34,8 +34,8 @@ upd = 20;               % # of sweeps after which the update of the
                         %time dependent potential is performed;
 
 metad = 0;              
-q = -Qtrh-dq:dq:Qtrh+dq;    %charge 'lattice';
-v = zeros(length(q),1);     %grid for the time dependent potential;
+q = -Qtrh-dq:dq:Qtrh+dq;         %charge 'lattice';
+td_pot = zeros(length(q),1);     %grid for the time dependent potential;
 
 
 %Lattice grid;
@@ -93,7 +93,7 @@ for k = 1:cycle
                                       %associated with the last path;
     
   
-    dt = (rand()-1)*0.005 + 0.025;    %time step of the integrator;
+    dt = (2*rand()-1)*0.005 + 0.025;    %time step of the integrator;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Omelyan integrator
@@ -120,7 +120,7 @@ for k = 1:cycle
 
                 %coefficient for the derivative
                 %of the the time dependent potential;
-                metad = (v(index) - v(index+1))/dq; 
+                metad = (td_pot(index) - td_pot(index+1))/dq; 
 
         end
             
@@ -153,7 +153,7 @@ for k = 1:cycle
          elseif index <= 0
             metad = -2*kk*(-Q(k)+Qtrh);
          else
-                metad = (v(index) - v(index+1))/dq;
+                metad = (td_pot(index) - td_pot(index+1))/dq;
 
          end
             
@@ -180,7 +180,7 @@ for k = 1:cycle
          elseif index <= 0
             metad = -2*kk*(-Q(k)+Qtrh);
          else
-                metad = (v(index) - v(index+1))/dq;
+                metad = (td_pot(index) - td_pot(index+1))/dq;
 
          end
             
@@ -212,7 +212,7 @@ for k = 1:cycle
              elseif index <= 0
                  metad = -2*kk*(-Q(k)+Qtrh);
              else
-                 metad = (v(index) - v(index+1))/dq;
+                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
              end
 
@@ -242,7 +242,7 @@ for k = 1:cycle
                 metad = -2*kk*(-Q(k)+Qtrh);
              else
 
-                metad = (v(index) - v(index+1))/dq;
+                metad = (td_pot(index) - td_pot(index+1))/dq;
 
              end
             
@@ -273,7 +273,7 @@ for k = 1:cycle
         elseif index <= 0
             metad = -2*kk*(-Q(k)+Qtrh);
         else
-                metad = (v(index) - v(index+1))/dq;
+                metad = (td_pot(index) - td_pot(index+1))/dq;
 
         end
             
@@ -295,7 +295,7 @@ for k = 1:cycle
          elseif index <= 0
             metad = -2*kk*(-Q(k)+Qtrh);
          else
-                metad = (v(index) - v(index+1))/dq;
+                metad = (td_pot(index) - td_pot(index+1))/dq;
 
          end
             
@@ -317,7 +317,7 @@ for k = 1:cycle
     elseif index <= 0        %Update id Q < - Qtrh;
       Vend = den*sum((sin(pi*d).^2)) + kk*(-Q(k) -Qtrh)^2; 
     else                     %Update inside the barrier;
-      Vend =  den*sum((sin(pi*d).^2))+v(index)+(v(index+1)-v(index))*(Q(k)-q(index));
+      Vend =  den*sum((sin(pi*d).^2))+td_pot(index)+(td_pot(index+1)-td_pot(index))*(Q(k)-q(index));
     end
     
     %Final Kinetic energy;
@@ -330,7 +330,7 @@ for k = 1:cycle
     %Metropolis step;
     
     if log(rand()) < LP1 - LP0
-        %Update of the stored path, charge and distances;
+        %Update the stored path, charge and distances;
         y0 = y;
         d0 = d;
         Q0 = Q(k);
@@ -352,11 +352,18 @@ for k = 1:cycle
         elseif index <= 0
             metad = -2*kk*(-Q(k)+Qtrh);
         else
-            V = V-v(index) - (v(index+1)-v(index))*(Q(k)-q(index));
-            v(index) = v(index) + hgt*(1 - (Q(k) - q(index))/dq);
-            v(index+1) = v(index+1) + hgt*((Q(k) - q(index))/dq);
-            metad = -(-v(index) + v(index+1))/dq;
-            V = V +v(index)+(v(index+1)-v(index))*(Q(k)-q(index));
+            %subtract the old value of the t-d-potential from the total
+            %potential;
+            V = V-td_pot(index) - (td_pot(index+1)-td_pot(index))*(Q(k)-q(index));
+            %Update V(i);
+            td_pot(index) = td_pot(index) + hgt*(1 - (Q(k) - q(index))/dq);           
+            %Update V(i+1);
+            td_pot(index+1) = td_pot(index+1) + hgt*((Q(k) - q(index))/dq);
+            %Update coefficient of metadynamic;
+            metad = -(-td_pot(index) + td_pot(index+1))/dq;
+            %Update the last potential with the new value of the
+            %t-d-potential;
+            V = V +td_pot(index)+(td_pot(index+1)-td_pot(index))*(Q(k)-q(index));
 
         end
     end
@@ -365,13 +372,15 @@ end
 
 a_rate = a_rate/cycle;
 
-filename1 =('Charge.txt');
-filename2 = ('Path.txt');
-filename3 = ('Parameters.txt');
 
 
-%Paths
-dlmwrite(filename1,Q,'-append','delimiter','\t');
-dlmwrite(filename2,y,'-append','delimiter','\t');
-dlmwrite(filename3,a_rate,'-append','delimiter','\t');
+
+%Write charge on file;
+writematrix(Q,'Charge.txt','delimiter','tab');
+%write final path on file;
+writematrix(y,'path.txt','delimiter','tab');
+%write acceptance rate on file;
+writematrix(a_rate,'acceptance_rate.txt','delimiter','tab');
+%write time dependet potential on file;
+writematrix(td_pot,'time_d_potential.txt','delimiter','tab');
 
