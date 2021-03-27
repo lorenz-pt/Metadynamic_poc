@@ -12,7 +12,7 @@ lam = 0.1931833275;
 
 
 %Number of measurements;
-cycle = 1e4;
+cycle = 1e5;
 
 
 % S(x(t)) parameters;
@@ -115,7 +115,7 @@ for k = 1:cycle
         if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
         elseif index <= 0
-            metad = -2*kk*(-Q(k)+Qtrh);
+            metad = -2*kk*(Q(k)+Qtrh);
         else
 
                 %coefficient for the derivative
@@ -151,7 +151,7 @@ for k = 1:cycle
          if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
          elseif index <= 0
-            metad = -2*kk*(-Q(k)+Qtrh);
+            metad = -2*kk*(Q(k)+Qtrh);
          else
                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -178,7 +178,7 @@ for k = 1:cycle
          if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
          elseif index <= 0
-            metad = -2*kk*(-Q(k)+Qtrh);
+            metad = -2*kk*(Q(k)+Qtrh);
          else
                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -210,7 +210,7 @@ for k = 1:cycle
              if index > length(q)-1  
                  metad = -2*kk*(Q(k)- Qtrh);
              elseif index <= 0
-                 metad = -2*kk*(-Q(k)+Qtrh);
+                 metad = -2*kk*(Q(k)+Qtrh);
              else
                  metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -239,7 +239,7 @@ for k = 1:cycle
              if index > length(q)-1  
                 metad = -2*kk*(Q(k)- Qtrh);
              elseif index <= 0
-                metad = -2*kk*(-Q(k)+Qtrh);
+                metad = -2*kk*(Q(k)+Qtrh);
              else
 
                 metad = (td_pot(index) - td_pot(index+1))/dq;
@@ -271,7 +271,7 @@ for k = 1:cycle
         if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
         elseif index <= 0
-            metad = -2*kk*(-Q(k)+Qtrh);
+            metad = -2*kk*(Q(k)+Qtrh);
         else
                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -293,7 +293,7 @@ for k = 1:cycle
          if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
          elseif index <= 0
-            metad = -2*kk*(-Q(k)+Qtrh);
+            metad = -2*kk*(Q(k)+Qtrh);
          else
                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -315,9 +315,9 @@ for k = 1:cycle
      
       Vend = den*sum((sin(pi*d).^2)) + kk*(Q(k) -Qtrh)^2; 
     elseif index <= 0        %Update id Q < - Qtrh;
-      Vend = den*sum((sin(pi*d).^2)) + kk*(-Q(k) -Qtrh)^2; 
+      Vend = den*sum((sin(pi*d).^2)) + kk*(Q(k) +Qtrh)^2; 
     else                     %Update inside the barrier;
-      Vend =  den*sum((sin(pi*d).^2))+td_pot(index)+(td_pot(index+1)-td_pot(index))*(Q(k)-q(index));
+      Vend =  den*sum((sin(pi*d).^2))+td_pot(index)+(td_pot(index+1)-td_pot(index))*(Q(k)-q(index))/dq;
     end
     
     %Final Kinetic energy;
@@ -350,20 +350,20 @@ for k = 1:cycle
         if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
         elseif index <= 0
-            metad = -2*kk*(-Q(k)+Qtrh);
+            metad = -2*kk*(Q(k)+Qtrh);
         else
             %subtract the old value of the t-d-potential from the total
             %potential;
-            V = V-td_pot(index) - (td_pot(index+1)-td_pot(index))*(Q(k)-q(index));
+            V = V-td_pot(index)-(td_pot(index+1)-td_pot(index))*(Q(k)-q(index))/dq;
             %Update V(i);
             td_pot(index) = td_pot(index) + hgt*(1 - (Q(k) - q(index))/dq);           
             %Update V(i+1);
             td_pot(index+1) = td_pot(index+1) + hgt*((Q(k) - q(index))/dq);
             %Update coefficient of metadynamic;
-            metad = -(-td_pot(index) + td_pot(index+1))/dq;
+            metad = (td_pot(index) - td_pot(index+1))/dq;
             %Update the last potential with the new value of the
             %t-d-potential;
-            V = V +td_pot(index)+(td_pot(index+1)-td_pot(index))*(Q(k)-q(index));
+            V = V+td_pot(index)+(td_pot(index+1)-td_pot(index))*(Q(k)-q(index))/dq;
 
         end
     end
@@ -376,11 +376,11 @@ a_rate = a_rate/cycle;
 
 
 %Write charge on file;
-writematrix(Q,'Charge.txt','delimiter','tab');
+writematrix(Q,'Charge_300_1(3).txt','delimiter','tab');
 %write final path on file;
-writematrix(y,'path.txt','delimiter','tab');
+writematrix(y,'path_300_1(3).txt','delimiter','tab');
 %write acceptance rate on file;
-writematrix(a_rate,'acceptance_rate.txt','delimiter','tab');
+writematrix(a_rate,'acceptance_rate_300_1(3).txt','delimiter','tab');
 %write time dependet potential on file;
-writematrix(td_pot,'time_d_potential.txt','delimiter','tab');
+writematrix(td_pot,'time_d_potential_300_1(3).txt','delimiter','tab');
 
