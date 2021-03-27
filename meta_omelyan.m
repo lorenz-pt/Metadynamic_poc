@@ -373,8 +373,6 @@ end
 a_rate = a_rate/cycle;
 
 
-
-
 %Write charge on file;
 writematrix(Q,'Charge_300_1(3).txt','delimiter','tab');
 %write final path on file;
