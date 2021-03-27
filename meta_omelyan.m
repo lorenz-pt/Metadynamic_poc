@@ -12,7 +12,7 @@ lam = 0.1931833275;
 
 
 %Number of measurements;
-cycle = 1e5;
+cycle = 1e4;
 
 
 % S(x(t)) parameters;
