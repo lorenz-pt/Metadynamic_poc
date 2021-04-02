@@ -81,11 +81,11 @@ end
 V = 0;
 
 %% Main body:
-% The steps of the algorithm are performed as follows: 
-%1) Symplettic integration with Omelyan integrator;
-%2) computation of the final kinetic and potential energy;
-%3) Metropolis step;
-%4) Update of the time dependent potential;
+% % The steps of the algorithm are performed as follows: 
+% %1) Symplettic integration with Omelyan integrator;
+% %2) computation of the final kinetic and potential energy;
+% %3) Metropolis step;
+% %4) Update of the time dependent potential;
 
 for k = 1:cycle
 
