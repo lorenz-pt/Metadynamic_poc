@@ -5,19 +5,19 @@
 N = 300;
 
 %Integration time;
-T = 220;
+T = 156;
 
 %Omelyan parameter lambda;
 lam = 0.1931833275;
 
 
 %Number of measurements;
-cycle = 1e4;
+cycle = 1e5;
 
 
 % S(x(t)) parameters;
 
-e = (1*(pi^2))/N;     
+e = (0.5*(pi^2))/N;     
 cc = pi/(2*e);          %coefficient multiplying the force;
 den = 1/(2*e);
 
@@ -27,8 +27,8 @@ oml = 1-2*lam;
 %metadynamic parameters;
 
 Qtrh = 20;              %Threshold value of the charge
-hgt = 0.73;             %height of the time dependent potential inside Qtrh;
-dq = 0.82;              %width of the  time dependent potential inside Qtrh;
+hgt = 1.03;             %height of the time dependent potential inside Qtrh;
+dq = 1;              %width of the  time dependent potential inside Qtrh;an optimal value was 0.82
 kk = 2;                 %strength of the potential outside Qtrh;
 upd = 20;               % # of sweeps after which the update of the 
                         %time dependent potential is performed;
@@ -53,6 +53,12 @@ y0 = zeros(N,1);
 d = zeros(N,1);
 d0 = zeros(N,1);
 
+%Useful vector for the minimization of the path;
+z = zeros(N,1);
+z_step = zeros(N,1);
+Q_min = zeros(N,1);
+d_min = zeros(N,1);
+d0 = zeros(N,1);
 
 
 %Strength vector;
@@ -367,6 +373,31 @@ for k = 1:cycle
 
         end
     end
+    
+    
+    %minimization of the action;
+    z = y;
+    for j = 1:2
+        for l = 1:N
+            
+            if abs(z(nu(l))-z(nd(l)))< 0.5 && abs(z(l)-z(nd(l))) < 0.5 && abs(z(nu(l))-z(l))<0.5
+                
+                z_step(l) = (z(nd(l)) + z(nu(l)))/2;
+            else
+                z_step(l) = z(l);
+            end
+            
+            
+        end
+        z = z_step;
+        
+    end
+    
+    for l = 1:N
+        d_min(l) = z(nu(l))-z(l);           
+    end
+    %charge for the minimized action;
+    Q_min(k) = sum(sin(dpi*d_min))/dpi;
          
 end
 
@@ -374,11 +405,11 @@ a_rate = a_rate/cycle;
 
 
 %Write charge on file;
-writematrix(Q,'Charge_300_1(3).txt','delimiter','tab');
+writematrix(Q,'Charge_300_0.5(3).txt','delimiter','tab');
 %write final path on file;
-writematrix(y,'path_300_1(3).txt','delimiter','tab');
+writematrix(y,'path_300_0.5(3).txt','delimiter','tab');
 %write acceptance rate on file;
-writematrix(a_rate,'acceptance_rate_300_1(3).txt','delimiter','tab');
+writematrix(a_rate,'acceptance_rate_300_0.5(3).txt','delimiter','tab');
 %write time dependet potential on file;
-writematrix(td_pot,'time_d_potential_300_1(3).txt','delimiter','tab');
+writematrix(td_pot,'time_d_potential_300_0.5(3).txt','delimiter','tab');
 
