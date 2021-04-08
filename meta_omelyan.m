@@ -2,22 +2,22 @@
 % The fundamental parameters, to be used in the following section are
 % defined.
 
-N = 300;
+N = 600;
 
 %Integration time;
-T = 156;
+T = 312;
 
 %Omelyan parameter lambda;
 lam = 0.1931833275;
 
 
 %Number of measurements;
-cycle = 1e5;
+cycle = 2e4;
 
 
 % S(x(t)) parameters;
 
-e = (0.5*(pi^2))/N;     
+e = (1*(pi^2))/N;     
 cc = pi/(2*e);          %coefficient multiplying the force;
 den = 1/(2*e);
 
@@ -28,15 +28,15 @@ oml = 1-2*lam;
 
 Qtrh = 20;              %Threshold value of the charge
 hgt = 1.03;             %height of the time dependent potential inside Qtrh;
-dq = 1;              %width of the  time dependent potential inside Qtrh;an optimal value was 0.82
-kk = 2;                 %strength of the potential outside Qtrh;
+dq = 1;              %width of the  time dependent potential inside Qtrh;
+kk = 0.70;                 %strength of the potential outside Qtrh;
 upd = 20;               % # of sweeps after which the update of the 
                         %time dependent potential is performed;
 
 metad = 0;              
 q = -Qtrh-dq:dq:Qtrh+dq;         %charge 'lattice';
 td_pot = zeros(length(q),1);     %grid for the time dependent potential;
-
+store = zeros(length(q),1);
 
 %Lattice grid;
 nu = linspace(2,N+1,N);
@@ -51,7 +51,7 @@ a_rate = 0;
 y = zeros(N,1);
 y0 = zeros(N,1);
 d = zeros(N,1);
-d0 = zeros(N,1);
+
 
 %Useful vector for the minimization of the path;
 z = zeros(N,1);
@@ -120,8 +120,8 @@ for k = 1:cycle
         
         if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
-        elseif index <= 0
-            metad = -2*kk*(Q(k)+Qtrh);
+        elseif index <= 1
+            metad = -2*kk*(Q(k)+Qtrh-dq);
         else
 
                 %coefficient for the derivative
@@ -156,8 +156,8 @@ for k = 1:cycle
          
          if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
-         elseif index <= 0
-            metad = -2*kk*(Q(k)+Qtrh);
+         elseif index <= 1
+            metad = -2*kk*(Q(k)+Qtrh-dq);
          else
                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -183,8 +183,8 @@ for k = 1:cycle
          index = floor((Q(k)-q(1))/dq + 1.);
          if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
-         elseif index <= 0
-            metad = -2*kk*(Q(k)+Qtrh);
+         elseif index <= 1
+            metad = -2*kk*(Q(k)+Qtrh-dq);
          else
                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -215,8 +215,8 @@ for k = 1:cycle
              index = floor((Q(k)-q(1))/dq + 1.);
              if index > length(q)-1  
                  metad = -2*kk*(Q(k)- Qtrh);
-             elseif index <= 0
-                 metad = -2*kk*(Q(k)+Qtrh);
+             elseif index <= 1
+                 metad = -2*kk*(Q(k)+Qtrh-dq);
              else
                  metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -244,8 +244,8 @@ for k = 1:cycle
              
              if index > length(q)-1  
                 metad = -2*kk*(Q(k)- Qtrh);
-             elseif index <= 0
-                metad = -2*kk*(Q(k)+Qtrh);
+             elseif index <= 1
+                metad = -2*kk*(Q(k)+Qtrh-dq);
              else
 
                 metad = (td_pot(index) - td_pot(index+1))/dq;
@@ -276,8 +276,8 @@ for k = 1:cycle
         index = floor((Q(k)-q(1))/dq + 1.);
         if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
-        elseif index <= 0
-            metad = -2*kk*(Q(k)+Qtrh);
+        elseif index <= 1
+            metad = -2*kk*(Q(k)+Qtrh-dq);
         else
                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -298,8 +298,8 @@ for k = 1:cycle
          index = floor((Q(k)-q(1))/dq + 1.);
          if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
-         elseif index <= 0
-            metad = -2*kk*(Q(k)+Qtrh);
+         elseif index <= 1
+            metad = -2*kk*(Q(k)+Qtrh-dq);
          else
                 metad = (td_pot(index) - td_pot(index+1))/dq;
 
@@ -320,8 +320,8 @@ for k = 1:cycle
     if  index > length(q)-1  %Update if Q > Qtrh;
      
       Vend = den*sum((sin(pi*d).^2)) + kk*(Q(k) -Qtrh)^2; 
-    elseif index <= 0        %Update id Q < - Qtrh;
-      Vend = den*sum((sin(pi*d).^2)) + kk*(Q(k) +Qtrh)^2; 
+    elseif index <= 1        %Update id Q < - Qtrh;
+      Vend = den*sum((sin(pi*d).^2)) + kk*(Q(k) +Qtrh-dq)^2; 
     else                     %Update inside the barrier;
       Vend =  den*sum((sin(pi*d).^2))+td_pot(index)+(td_pot(index+1)-td_pot(index))*(Q(k)-q(index))/dq;
     end
@@ -355,10 +355,11 @@ for k = 1:cycle
     if mod(k,upd) == 0
         if index > length(q)-1  
             metad = -2*kk*(Q(k)- Qtrh);
-        elseif index <= 0
-            metad = -2*kk*(Q(k)+Qtrh);
+        elseif index <= 1
+            metad = -2*kk*(Q(k)+Qtrh-dq);
         else
             %subtract the old value of the t-d-potential from the total
+            %try updating also the first point
             %potential;
             V = V-td_pot(index)-(td_pot(index+1)-td_pot(index))*(Q(k)-q(index))/dq;
             %Update V(i);
@@ -374,7 +375,9 @@ for k = 1:cycle
         end
     end
     
-    
+    if k > 7e4 && mod(k,upd) == 0
+        store = store + td_pot;
+    end
     %minimization of the action;
     z = y;
     for j = 1:2
@@ -402,7 +405,7 @@ for k = 1:cycle
 end
 
 a_rate = a_rate/cycle;
-
+store = store/1500;
 
 %Write charge on file;
 writematrix(Q,'Charge_300_0.5(3).txt','delimiter','tab');
