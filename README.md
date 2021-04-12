@@ -5,4 +5,4 @@ The program uses an HMC (Hamiltonian Monte Carlo or Hybrid Monte carlo) algorith
 
 Metadynamics is needed for healing topological freezing at low temperature (in the code, this is equivalent to choosing a small 'e' or great values of 'N', the length of the paths).
 
-The code, with the preset values of the parameters, takes about 1:40 minutes.
+The code, with N = 300, T = 156, takes about 1:40 minutes.
