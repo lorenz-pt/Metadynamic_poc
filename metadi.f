@@ -1,17 +1,19 @@
         program metadi
 
         parameter(nlattice = 300)
-
+        parameter(length = 59 )
         real*8 dq, hgt, ext, metad, charge, qtrh  !! Metadynamics parameters
         real*8 den,cc,arate,dt, par,dist(nlattice)!! HMC parameters
-                                                 
+        real*8 store(length),td_pot,vin
+
 
         integer in_time, measures,step            !! Omelyan/ metropolis integer parameters
         common/metain/ qtrh, dq, hgt, ext,arate
-        
+        common/potential/td_pot(length), vin
 
         open(1,file = 'meta_input',status = 'old')
-        open(2,file = 'meta_misure_2',status ='unknown')
+        open(2,file = 'meta_misure_2(7)',status ='unknown')
+        open(3,file = 'tdp_2(7)',status = 'unknown')
 
 c============================================================================
 C Parameters to be passed
@@ -42,6 +44,10 @@ c============================================================================
         call momentum()                         !!initialize the momenta
         call metropolis_update(den,charge,step) !!initialize charge, distance and fields initial valuez
 
+        do i = 1,length
+            store(i) = 0.0
+        enddo
+
 c----------------------------------------------------------------------------
 C START MEASURING------------------------------------------------------------
 c----------------------------------------------------------------------------
@@ -57,20 +63,31 @@ c----------------------------------------------------------------------------
             k = mod(i_measures,20)                      !! every 20 steps update the time dependent potential
 
             if (k.EQ.0) then
-                call time_dependent_p(charge)           
+                call time_dependent_p(charge) 
+
+                if (i_measures.GT.100000) then
+                    do ip = 1,length
+                        store(ip) = store(ip) + td_pot(ip)
+                    enddo
+                endif
+                        
             endif
 
             write(2,*) charge, i_measures               !! write the values of the charge on file: meta_misure
         enddo
 
+        store = store/float(2500)
         print *, 'Acceptance rate:', arate/float(measures)
         
-        
+        do i = 1,length
+            write(3,*) store(i)
+        enddo
+
         call ranfinish                                  !! save the seed
 
         close(1)                                        !! close opened files
         close(2)
-
+        close(3)
         
         end
 c============================================================================
@@ -285,7 +302,7 @@ c============================================================================
             subroutine metropolis_update(den,charge,step)
 
             parameter(nlattice = 300)
-            parameter(length = 76)                              !!length of the potential
+            parameter(length = 59)                              !!length of the potential
 
             real*8 dist(nlattice),den,pp
             real*8 qtrh,dq,hgt,ext,td_pot(length),q,charge
@@ -357,9 +374,10 @@ c============================================================================
             if (index.GE.length) then                   !! potential outside the barrier (rigth)
                 arm = (charge - qtrh)
                 vend = vend + ext*arm*arm
-            elseif (index.LE.1) then                    !! potential inside the barrier (left)
-                arm = (charge + qtrh-dq)
+            elseif (index.LT.1) then                    !! potential inside the barrier (left)
+                arm = (charge + qtrh)
                 vend = vend + ext*arm*arm
+                
             else                                        !! potential inside the barrier (triangular potential)
                 vend = vend + td_pot(index) +
      &          (td_pot(index+1) - td_pot(index))*(charge-q)/dq
@@ -394,7 +412,7 @@ c============================================================================
 C Biased potential construction
 c============================================================================  
             subroutine time_dependent_p(charge)
-            parameter(length = 76)
+            parameter(length = 59)
             
             real*8 charge,qtrh,dq,ext,hgt,td_pot,q
             real*8 vin, arate
@@ -404,7 +422,7 @@ c============================================================================
             index = int((charge+qtrh)/dq + 2.)              !!find the position on the 'charge lattice'
             q = -qtrh-dq + (index-1.)*dq                    !!compute the charge value on the grid
             
-            if (index.LT.length.AND.index.GT.1) then
+            if (index.LT.length.AND.index.GE.1) then
                 !! remove the last value of the time dependent potential from
                 !! the potential associated to the last accepted path
                 vin = vin-td_pot(index)-                    
@@ -420,6 +438,13 @@ c============================================================================
      &          (td_pot(index+1)-td_pot(index))*(charge-q)/dq  
             endif
 
+
+            if (index.EQ.length) then
+                !! update the potential
+                td_pot(index)=td_pot(index)+hgt*(1.-(charge-q)/dq)  
+            endif
+
+
             return
             end
 
@@ -430,7 +455,7 @@ c============================================================================
         real*8  function metad(dist)
 
         parameter(nlattice = 300)
-        parameter(length = 76)                  
+        parameter(length = 59)                  
 
         real*8 dist(nlattice),vi,arate
         real*8 charge,qtrh,dq,hgt,ext,td_pot
@@ -454,14 +479,17 @@ c============================================================================
 
         if (index.GE.length) then                       !! return the time dependent strength coefficient
             metad = -2.*ext*(charge - qtrh)
-        elseif (index.LE.1) then
-            metad = -2.*ext*(charge + qtrh -dq)
+            !print *, 'up:', index, metad
+        elseif (index.LT.1) then
+            metad = -2.*ext*(charge + qtrh)
+            !print *, 'down:', index, metad
         else
             metad = (td_pot(index)-td_pot(index+1))/dq
         endif
 
         return
         end
+
 c============================================================================
 C Casual number generator ran2
 c============================================================================
