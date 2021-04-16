@@ -1,7 +1,7 @@
         program metadi
 
-        parameter(nlattice = 600)
-        parameter(length = 29 )
+        parameter(nlattice = 500)
+        parameter(length = 55 )
         real*8 dq, hgt, ext, metad, charge, qtrh  !! Metadynamics parameters
         real*8 den,cc,arate,dt, par,dist(nlattice)!! HMC parameters
         real*8 store(length),td_pot,vin
@@ -12,8 +12,8 @@
         common/potential/td_pot(length), vin
 
         open(1,file = 'meta_input',status = 'old')
-        open(2,file = 'meta_misure_2_600v7',status ='unknown')
-        open(3,file = 'tdp_2_600v7',status = 'unknown')
+        open(2,file = 'meta_misure_2_500v7',status ='unknown')
+        open(3,file = 'tdp_2_500v7',status = 'unknown')
 
 c============================================================================
 C Parameters to be passed
@@ -65,7 +65,7 @@ c----------------------------------------------------------------------------
             if (k.EQ.0) then
                 call time_dependent_p(charge) 
 
-                if (i_measures.GT.80000) then
+                if (i_measures.GT.100000) then
                     do ip = 1,length
                         store(ip) = store(ip) + td_pot(ip)
                     enddo
@@ -76,11 +76,11 @@ c----------------------------------------------------------------------------
             write(2,*) charge, i_measures               !! write the values of the charge on file: meta_misure
         enddo
 
-        store = store/float(5000)
+        store = store/float(10000)
         print *, 'Acceptance rate:', arate/float(measures)
         
-        do i = 1,length
-            write(3,*) store(i)
+        do i = 2,length-1
+            write(3,*) store(i), -qtrh + (i-2.)*dq
         enddo
 
         call ranfinish                                  !! save the seed
@@ -101,7 +101,7 @@ C Initialize lattice
 c============================================================================
             subroutine initialize_lattice(start)
             
-            parameter (nlattice = 600)
+            parameter (nlattice = 500)
 
             common/lattice/y(nlattice)
             
@@ -126,7 +126,7 @@ C Lattice grid
 c============================================================================
             subroutine lattice_grid()
 
-            parameter (nlattice = 600)
+            parameter (nlattice = 500)
             
             common/move/np(nlattice),nm(nlattice)
               
@@ -143,7 +143,7 @@ c============================================================================
 C Generate momenta (BOX MULLER)
 c============================================================================
             subroutine momentum()
-            parameter(nlattice = 600)
+            parameter(nlattice = 500)
             real*8 e_k, pp
             common/momenta/pp(nlattice), e_k            
             pi = 3.141592653589793
@@ -174,7 +174,7 @@ C HMC + Meta (Omelyan)
 c============================================================================
             subroutine hmc(dt,in_time,cc)
             
-            parameter(nlattice = 600)
+            parameter(nlattice = 500)
             real*8 qtrh, dq, hgt, ext
             real*8 arate,pp,e_k
 
@@ -301,8 +301,8 @@ C Metropolis
 c============================================================================
             subroutine metropolis_update(den,charge,step)
 
-            parameter(nlattice = 600)
-            parameter(length = 29)                              !!length of the potential
+            parameter(nlattice = 500)
+            parameter(length = 55)                              !!length of the potential
 
             real*8 dist(nlattice),den,pp
             real*8 qtrh,dq,hgt,ext,td_pot(length),q,charge
@@ -369,17 +369,16 @@ c============================================================================
             enddo
 
             index = int((charge+qtrh)/dq + 2.)          !! index associated with the charge
-            q = -qtrh-dq + (index-1)*dq                 !! value of the charge on the grid
-            
-            if (index.GE.length) then                   !! potential outside the barrier (rigth)
-                arm = (charge - qtrh-dq)
-                vend = vend + ext*arm*arm + td_pot(length)
+            q = -qtrh-dq + (float(index)-1.)*dq                 !! value of the charge on the grid
+            if (index.GE.(length-1)) then                   !! potential outside the barrier (rigth)
+                arm = (charge - qtrh)
+                vend = vend + ext*arm*arm + td_pot(length-1)
                 !print *, 'potential:', vend, vin,index
                 !print *, 'kinetice:', e_end, e_k,index
-            elseif (index.LT.1) then                    !! potential inside the barrier (left)
-                arm = (charge + qtrh+dq)
-                vend = vend + ext*arm*arm + td_pot(1)
-                !print *, 'potential:', vend, vin,index
+            elseif (index.LE.1) then                    !! potential inside the barrier (left)
+                arm = (charge + qtrh)
+                vend = vend + ext*arm*arm + td_pot(2)
+                !print *, 'potential:', vend, vin
                ! print *, 'kinetice:', e_end, e_k,index
             else                                        !! potential inside the barrier (triangular potential)
                 vend = vend + td_pot(index) +
@@ -388,7 +387,8 @@ c============================================================================
 
             lgi = -e_k-vin                              !! logarithm of the initial probability
             lgf = -vend-e_end                           !!                  final
-          
+            
+            
 
             if (log(ran2()).LT.(lgf-lgi)) then          !! accept reject with the replacement of the
                 charge_0 = charge                       !! storage variables
@@ -415,38 +415,63 @@ c============================================================================
 C Biased potential construction
 c============================================================================  
             subroutine time_dependent_p(charge)
-            parameter(length = 29)
+            parameter(length = 55)
             
             real*8 charge,qtrh,dq,ext,hgt,td_pot,q
-            real*8 vin, arate
+            real*8 vin, arate,frac
             common/metain/qtrh, dq, hgt, ext,arate
             common/potential/td_pot(length),vin
 
             index = int((charge+qtrh)/dq + 2.)              !!find the position on the 'charge lattice'
-            q = -qtrh-dq + (index-1.)*dq                    !!compute the charge value on the grid
+            q = -qtrh-dq + (float(index)-1.)*dq                    !!compute the charge value on the grid
+            frac = (charge-q)/dq
+         
             
-            if (index.LT.length.AND.index.GE.1) then
+            if (index.LT.(length-1).AND.index.GT.1) then   
+                tdpi = td_pot(index)
+                tdpip1 = td_pot(index+1)
                 !! remove the last value of the time dependent potential from
                 !! the potential associated to the last accepted path
-                vin = vin-td_pot(index)-                    
-     &          (td_pot(index+1)-td_pot(index))*(charge-q)/dq  
+                vin = vin-tdpi-(tdpip1-tdpi)*frac 
 
                 !! update the potential
-                td_pot(index)=td_pot(index)+hgt*(1.-(charge-q)/dq)  
-                td_pot(index+1)=td_pot(index+1)+hgt*((charge - q)/dq)
+                tdpi=tdpi+hgt*(1.-frac)  
+                tdpip1=tdpip1+hgt*frac
 
                 !! add the new value of the time dependent potential from
                 !! the potential associated to the last accepted path
-                vin = vin+td_pot(index)+
-     &          (td_pot(index+1)-td_pot(index))*(charge-q)/dq  
+                vin = vin+tdpi+(tdpip1-tdpi)*frac
+
+                td_pot(index)= tdpi 
+                td_pot(index+1) = tdpip1
             endif
 
-            if (index.EQ.0)then
-                td_pot(index+1)=td_pot(index+1)+hgt*((charge - q)/dq)
+            if (index.EQ.(length-1))then
+                tdpi = td_pot(index)
+                tdpip1 = td_pot(index+1)
+                vin = vin-tdpi                             
+                !! update the potential
+                tdpi=tdpi+hgt*(1.-frac)  
+                tdpip1=tdpip1+hgt*frac
+                !! add the new value of the time dependent potential from
+                !! the potential associated to the last accepted path
+                vin = vin+tdpi
+                td_pot(index)= tdpi 
+                td_pot(index+1) = tdpip1
             endif
 
-            if (index.EQ.length)then
-                td_pot(index)=td_pot(index)+hgt*(1.-(charge-q)/dq) 
+            if (index.EQ.1)then
+                tdpi = td_pot(index)
+                tdpip1 = td_pot(index+1)
+                vin = vin-tdpip1                             
+                !! update the potential
+                tdpi=tdpi+hgt*(1.-frac)  
+                tdpip1=tdpip1+hgt*frac
+                !! add the new value of the time dependent potential from
+                !! the potential associated to the last accepted path
+                vin = vin+tdpip1
+                td_pot(index)= tdpi 
+                td_pot(index+1) = tdpip1
             endif
 
 
@@ -459,8 +484,8 @@ C strength construction
 c============================================================================ 
         real*8  function metad(dist)
 
-        parameter(nlattice = 600)
-        parameter(length = 29)                  
+        parameter(nlattice = 500)
+        parameter(length = 55)                  
 
         real*8 dist(nlattice),vi,arate
         real*8 charge,qtrh,dq,hgt,ext,td_pot
@@ -482,12 +507,11 @@ c============================================================================
         index = int((charge+qtrh)/dq + 2.)              !!find the position on the 'charge lattice'
         
 
-        if (index.GE.length )then                       !! return the time dependent strength coefficient
-            metad = -2.*ext*(charge - qtrh-dq)
-           
-        elseif (index.LT.1) then
-            metad = -2.*ext*(charge + qtrh+dq)
-           
+        if (index.GE.(length-1) )then                       !! return the time dependent strength coefficient
+            metad = -2.*ext*(charge - qtrh)
+        elseif (index.LE.1) then
+            metad = -2.*ext*(charge + qtrh)
+          
         else
             metad = (td_pot(index)-td_pot(index+1))/dq
         endif
