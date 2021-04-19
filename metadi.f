@@ -1,22 +1,23 @@
         program metadi
 
-        parameter(nlattice = 500)
-        parameter(length = 55 )
+        parameter(nlattice = 800)                 !! time interval of the path
+        parameter(length = 53 )                   !! length of the grid for the time dependent potential
         real*8 dq, hgt, ext, metad, charge, qtrh  !! Metadynamics parameters
         real*8 den,cc,arate,dt, par,dist(nlattice)!! HMC parameters
-        real*8 store(length),td_pot,vin
+        real*8 store(length),td_pot,vin           !! mean time dependent potential, tdp , back up potential
+                                                  !! for the path
 
-
+        integer save_value, tau                   
         integer in_time, measures,step            !! Omelyan/ metropolis integer parameters
-        common/metain/ qtrh, dq, hgt, ext,arate
-        common/potential/td_pot(length), vin
+        common/metain/ qtrh, dq, hgt, ext,arate   !! metadynamics parameters common block
+        common/potential/td_pot(length), vin      !! time dependent potential and back up potential common block
 
-        open(1,file = 'meta_input',status = 'old')
-        open(2,file = 'meta_misure_2_500v7',status ='unknown')
-        open(3,file = 'tdp_2_500v7',status = 'unknown')
+        open(1,file = 'meta_input',status = 'old')                  !!input 
+        open(2,file = 'meta_misure_2_800v6',status ='unknown')      !!file where the charge is written
+        open(3,file = 'tdp_2_800v6',status = 'unknown')             !!file where the tdp is written
 
 c============================================================================
-C Parameters to be passed
+C Input parameters 
 c============================================================================
         
         read(1,*) measures                      !! number of measures
@@ -28,6 +29,8 @@ c============================================================================
         read(1,*) hgt                           !! heigth of the potential
         read(1,*) ext                           !! strength of the potential outside the barrier 
         read(1,*) start                         !! 1 for random start, 0 for cold start
+        read(1,*) tau                           !! time before the next update of the potential
+        read(1,*) save_value                    !! after how many sweeps the code start saving the poential
 
         pi = 3.141592653589793
 
@@ -45,7 +48,7 @@ c============================================================================
         call metropolis_update(den,charge,step) !!initialize charge, distance and fields initial valuez
 
         do i = 1,length
-            store(i) = 0.0
+            store(i) = 0.0                      !! initialized the mean tdp
         enddo
 
 c----------------------------------------------------------------------------
@@ -60,14 +63,14 @@ c----------------------------------------------------------------------------
 
             call metropolis_update(den,charge,step)     !! metropolis step which returns the charge value
 
-            k = mod(i_measures,15)                      !! every 20 steps update the time dependent potential
+            k = mod(i_measures,tau)                      !! every 20 steps update the time dependent potential
 
             if (k.EQ.0) then
                 call time_dependent_p(charge) 
 
-                if (i_measures.GT.100000) then
+                if (i_measures.GT.save_value) then
                     do ip = 1,length
-                        store(ip) = store(ip) + td_pot(ip)
+                        store(ip) = store(ip) - td_pot(ip)  !! mean of the negative tdp
                     enddo
                 endif
                         
@@ -76,7 +79,7 @@ c----------------------------------------------------------------------------
             write(2,*) charge, i_measures               !! write the values of the charge on file: meta_misure
         enddo
 
-        store = store/float(10000)
+        store = store/float((measures-save_value)/tau)
         print *, 'Acceptance rate:', arate/float(measures)
         
         do i = 2,length-1
@@ -101,7 +104,7 @@ C Initialize lattice
 c============================================================================
             subroutine initialize_lattice(start)
             
-            parameter (nlattice = 500)
+            parameter (nlattice = 800)
 
             common/lattice/y(nlattice)
             
@@ -126,7 +129,7 @@ C Lattice grid
 c============================================================================
             subroutine lattice_grid()
 
-            parameter (nlattice = 500)
+            parameter (nlattice = 800)
             
             common/move/np(nlattice),nm(nlattice)
               
@@ -143,7 +146,7 @@ c============================================================================
 C Generate momenta (BOX MULLER)
 c============================================================================
             subroutine momentum()
-            parameter(nlattice = 500)
+            parameter(nlattice = 800)
             real*8 e_k, pp
             common/momenta/pp(nlattice), e_k            
             pi = 3.141592653589793
@@ -174,7 +177,7 @@ C HMC + Meta (Omelyan)
 c============================================================================
             subroutine hmc(dt,in_time,cc)
             
-            parameter(nlattice = 500)
+            parameter(nlattice = 800)
             real*8 qtrh, dq, hgt, ext
             real*8 arate,pp,e_k
 
@@ -184,7 +187,7 @@ c============================================================================
             common/move/np(nlattice),nm(nlattice)
             
 
-            real*8 pi,dpi,lam, dist(nlattice),f,fc,force(nlattice),cc
+            real*8 pi,dpi,lam, dist(nlattice),f,fc,force,cc
             real*8 metad,dt
 
             dpi =  6.283185307
@@ -192,7 +195,7 @@ c============================================================================
             lam = 0.1931833275                                          !!lambda Omelyan parameter 
             omely = 1.-2.*lam       
 
-            ddt = (2.*ran2()-1.)*0.005 + 0.025                          !! time step chosen casually around 0.025
+            ddt = (2.*ran2()-1.)*0.002 + dt                         !! time step chosen casually around 0.025
 
 c*****************************************************************************
 C First step
@@ -208,10 +211,10 @@ c*****************************************************************************
             
             do i = 1,nlattice
                 f = fc*(-cos(dpi*dist(i)) + cos(dpi*dist(nm(i))))       !! time dependent force
-                force(i)=-cc*(sin(dpi*dist(nm(i)))-                     !! force from the derivative of the action
+                force=-cc*(sin(dpi*dist(nm(i)))-                     !! force from the derivative of the action
      &          sin(dpi*dist(i)))+f
 
-                pp(i) = pp(i) + (ddt/2.)*force(i)                       !! first update of the momentum
+                pp(i) = pp(i) + (ddt/2.)*force                       !! first update of the momentum
                 y(i) = y(i) + pp(i)*ddt*omely                           !! second update of the field
             enddo
 
@@ -223,10 +226,10 @@ c*****************************************************************************
 
             do i = 1,nlattice
                 f = fc*(-cos(dpi*dist(i)) + cos(dpi*dist(nm(i))))
-                force(i)=-cc*(sin(dpi*dist(nm(i)))-
+                force=-cc*(sin(dpi*dist(nm(i)))-
      &          sin(dpi*dist(i)))+f
 
-                pp(i) = pp(i) + (ddt/2.)*force(i)
+                pp(i) = pp(i) + (ddt/2.)*force
                 y(i) = y(i) + pp(i)*ddt*2.*lam
             enddo
             do i = 1,nlattice
@@ -241,10 +244,10 @@ c*****************************************************************************
 
             do i = 1,nlattice
                 f = fc*(-cos(dpi*dist(i)) + cos(dpi*dist(nm(i))))
-                force(i)=-cc*(sin(dpi*dist(nm(i)))-
+                force=-cc*(sin(dpi*dist(nm(i)))-
      &          sin(dpi*dist(i)))+f
 
-                pp(i) = pp(i) + (ddt/2.)*force(i)
+                pp(i) = pp(i) + (ddt/2.)*force
                 y(i) = y(i) + pp(i)*ddt*omely
             enddo
 
@@ -255,10 +258,10 @@ c*****************************************************************************
             fc = metad(dist)
             do i = 1,nlattice
                 f = fc*(-cos(dpi*dist(i)) + cos(dpi*dist(nm(i))))
-                force(i)=-cc*(sin(dpi*dist(nm(i)))-
+                force=-cc*(sin(dpi*dist(nm(i)))-
      &          sin(dpi*dist(i)))+f
 
-                pp(i) = pp(i) + (ddt/2.)*force(i)
+                pp(i) = pp(i) + (ddt/2.)*force
                 y(i) = y(i) + pp(i)*ddt*2.*lam
             enddo
             do i = 1,nlattice
@@ -273,10 +276,10 @@ C last step
 c*****************************************************************************
          do i = 1,nlattice
                 f = fc*(-cos(dpi*dist(i)) + cos(dpi*dist(nm(i))))
-                force(i)=-cc*(sin(dpi*dist(nm(i)))-
+                force=-cc*(sin(dpi*dist(nm(i)))-
      &          sin(dpi*dist(i)))+f
 
-                pp(i) = pp(i) + (ddt/2.)*force(i)
+                pp(i) = pp(i) + (ddt/2.)*force
                 y(i) = y(i) + pp(i)*ddt*omely
             enddo
 
@@ -287,10 +290,10 @@ c*****************************************************************************
             fc = metad(dist)
             do i = 1,nlattice
                 f = fc*(-cos(dpi*dist(i)) + cos(dpi*dist(nm(i))))       
-                force(i)=-cc*(sin(dpi*dist(nm(i)))-
+                force=-cc*(sin(dpi*dist(nm(i)))-
      &          sin(dpi*dist(i)))+f
 
-                pp(i) = pp(i) + (ddt/2.)*force(i)
+                pp(i) = pp(i) + (ddt/2.)*force
                 y(i) = y(i) + pp(i)*ddt*lam
             enddo
             return
@@ -301,8 +304,8 @@ C Metropolis
 c============================================================================
             subroutine metropolis_update(den,charge,step)
 
-            parameter(nlattice = 500)
-            parameter(length = 55)                              !!length of the potential
+            parameter(nlattice = 800)
+            parameter(length = 53)                              !!length of the potential
 
             real*8 dist(nlattice),den,pp
             real*8 qtrh,dq,hgt,ext,td_pot(length),q,charge
@@ -336,9 +339,11 @@ c============================================================================
                 dist(i) = y(np(i)) -y(i)
                 si = sin(pi*dist(i))
 
-                vend = vend + si*si*den
+                vend = vend + si*si
             enddo
-        
+
+            vend = vend*den
+
             do i = 1,nlattice
 
                 ti = pp(i)
@@ -360,9 +365,10 @@ c============================================================================
                     
                 enddo
                 vin = vend
+                step = step +1
             endif
 
-            step = step +1
+            
             
             do i = 1,nlattice
                 charge = charge + sin(dpi*dist(i))/dpi  !! charge
@@ -373,16 +379,15 @@ c============================================================================
             if (index.GE.(length-1)) then                   !! potential outside the barrier (rigth)
                 arm = (charge - qtrh)
                 vend = vend + ext*arm*arm + td_pot(length-1)
-                !print *, 'potential:', vend, vin,index
-                !print *, 'kinetice:', e_end, e_k,index
+                
             elseif (index.LE.1) then                    !! potential inside the barrier (left)
                 arm = (charge + qtrh)
                 vend = vend + ext*arm*arm + td_pot(2)
-                !print *, 'potential:', vend, vin
-               ! print *, 'kinetice:', e_end, e_k,index
+             
             else                                        !! potential inside the barrier (triangular potential)
                 vend = vend + td_pot(index) +
      &          (td_pot(index+1) - td_pot(index))*(charge-q)/dq
+            
             endif
 
             lgi = -e_k-vin                              !! logarithm of the initial probability
@@ -415,10 +420,11 @@ c============================================================================
 C Biased potential construction
 c============================================================================  
             subroutine time_dependent_p(charge)
-            parameter(length = 55)
+            parameter(length = 53)
             
             real*8 charge,qtrh,dq,ext,hgt,td_pot,q
             real*8 vin, arate,frac
+
             common/metain/qtrh, dq, hgt, ext,arate
             common/potential/td_pot(length),vin
 
@@ -433,7 +439,6 @@ c============================================================================
                 !! remove the last value of the time dependent potential from
                 !! the potential associated to the last accepted path
                 vin = vin-tdpi-(tdpip1-tdpi)*frac 
-
                 !! update the potential
                 tdpi=tdpi+hgt*(1.-frac)  
                 tdpip1=tdpip1+hgt*frac
@@ -441,7 +446,6 @@ c============================================================================
                 !! add the new value of the time dependent potential from
                 !! the potential associated to the last accepted path
                 vin = vin+tdpi+(tdpip1-tdpi)*frac
-
                 td_pot(index)= tdpi 
                 td_pot(index+1) = tdpip1
             endif
@@ -484,10 +488,10 @@ C strength construction
 c============================================================================ 
         real*8  function metad(dist)
 
-        parameter(nlattice = 500)
-        parameter(length = 55)                  
+        parameter(nlattice = 800)
+        parameter(length = 53)                  
 
-        real*8 dist(nlattice),vi,arate
+        real*8 dist(nlattice),vin,arate
         real*8 charge,qtrh,dq,hgt,ext,td_pot
 
         common/metain/qtrh, dq, hgt, ext,arate
@@ -499,12 +503,12 @@ c============================================================================
         charge = 0.0
         dpi = 6.283185307
 
-        do i_c = 1,nlattice                             !!compute the charge
+        do i_c = 1,nlattice                                 !!compute the charge
             charge = charge + sin(dpi*dist(i_c))
         enddo
         charge = charge/dpi
 
-        index = int((charge+qtrh)/dq + 2.)              !!find the position on the 'charge lattice'
+        index = int((charge+qtrh)/dq + 2.)                  !!find the position on the 'charge lattice'
         
 
         if (index.GE.(length-1) )then                       !! return the time dependent strength coefficient
